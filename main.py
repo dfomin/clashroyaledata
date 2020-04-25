@@ -36,7 +36,7 @@ def store_battle_log(player_tag: str, battle_log: list) -> bool:
 
 
 async def fetch_warlog(session, clan_tag: str) -> bool:
-    url = f"https://api.clashroyale.com/v1/clans/%23{clan_tag}/warlog"
+    url = "https://api.clashroyale.com/v1/clans/%23" + clan_tag + "/warlog"
 
     params = dict(
         authorization=royale_token
@@ -48,7 +48,7 @@ async def fetch_warlog(session, clan_tag: str) -> bool:
 
 
 async def fetch_current_war(session, clan_tag: str):
-    url = f"https://api.clashroyale.com/v1/clans/%23{clan_tag}/currentwar"
+    url = "https://api.clashroyale.com/v1/clans/%23" + clan_tag + "/currentwar"
 
     params = dict(
         authorization=royale_token
@@ -69,7 +69,7 @@ async def fetch_current_war(session, clan_tag: str):
 
 
 async def fetch_player_battle_log(session, player_tag: str):
-    url = f"https://api.clashroyale.com/v1/players/%23{player_tag}/battlelog"
+    url = "https://api.clashroyale.com/v1/players/%23" + player_tag + "/battlelog"
 
     params = dict(
         authorization=royale_token
@@ -82,7 +82,7 @@ async def fetch_player_battle_log(session, player_tag: str):
 
 
 async def fetch_clan_battle_log(session, clan_tag: str):
-    url = f"https://api.clashroyale.com/v1/clans/%23{clan_tag}"
+    url = "https://api.clashroyale.com/v1/clans/%23" + clan_tag
 
     params = dict(
         authorization=royale_token
