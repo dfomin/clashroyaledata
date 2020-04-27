@@ -99,14 +99,17 @@ async def main():
     clan_tag = "2UJ2GJ"
     battle_log_cooldown = 60 * 60
     async with aiohttp.ClientSession() as session:
+        await fetch_warlog(session, clan_tag)
+        await fetch_clan_battle_log(session, clan_tag)
+
         while True:
             seconds_left = await fetch_current_war(session, clan_tag)
             if seconds_left < battle_log_cooldown:
-                await fetch_warlog(session, clan_tag)
                 await asyncio.sleep(seconds_left + 10)
+                await fetch_warlog(session, clan_tag)
             else:
-                await fetch_clan_battle_log(session, clan_tag)
                 await asyncio.sleep(battle_log_cooldown)
+                await fetch_clan_battle_log(session, clan_tag)
 
 
 if __name__ == '__main__':
