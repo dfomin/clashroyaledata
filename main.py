@@ -102,11 +102,11 @@ async def main():
         while True:
             seconds_left = await fetch_current_war(session, clan_tag)
             if seconds_left < battle_log_cooldown:
-                await asyncio.sleep(seconds_left)
                 await fetch_warlog(session, clan_tag)
+                await asyncio.sleep(seconds_left + 10)
             else:
-                await asyncio.sleep(battle_log_cooldown)
                 await fetch_clan_battle_log(session, clan_tag)
+                await asyncio.sleep(battle_log_cooldown)
 
 
 if __name__ == '__main__':
