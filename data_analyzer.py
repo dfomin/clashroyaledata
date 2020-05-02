@@ -29,11 +29,11 @@ class Player:
         return min_level
 
     @property
-    def sum_level(self):
+    def mean_level(self):
         s = 0
         for card in self.cards:
-            s += card["level"] - card["maxLevel"]
-        return s
+            s += 13 - card["maxLevel"] + card["level"]
+        return s / len(self.cards)
 
 
 async def load_player(session, player_tag: str) -> Player:
@@ -51,43 +51,85 @@ async def load_player(session, player_tag: str) -> Player:
         return player
 
 
-async def main():
-    db = client["clashroyale"]
-    war_log = db["warlog"]
-    war = next(war_log.find({}).sort("createdDate", -1))
-    date = war["createdDate"]
-    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
-    start_date = end_date + timedelta(days=-1)
-
-    battle_log = db["battlelog"]
-    battles = battle_log.find({"type": "clanWarWarDay"})
-    current_war_battles = []
+def filter_battles_by_date(battles, start_date, end_date):
+    filtered_battles = []
     for battle in battles:
         date = battle["battleTime"]
         battle_time = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
         if start_date <= battle_time <= end_date:
-            current_war_battles.append(battle)
+            filtered_battles.append(battle)
+    return filtered_battles
 
+
+def load_collection_day_battles(date, battle_log):
+    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ") + timedelta(days=1)
+    start_date = end_date + timedelta(days=-1)
+
+    battles = battle_log.find({"type": "clanWarCollectionDay"})
+    current_war_battles = filter_battles_by_date(battles, start_date, end_date)
+    return current_war_battles
+
+
+def load_war_day_battles(date, battle_log):
+    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
+    start_date = end_date + timedelta(days=-1)
+
+    battles = battle_log.find({"type": "clanWarWarDay"})
+    current_war_battles = filter_battles_by_date(battles, start_date, end_date)
+    return current_war_battles
+
+
+async def load_opponents(battles):
     async with aiohttp.ClientSession() as session:
         players = []
-        for battle in tqdm(current_war_battles):
+        for battle in tqdm(battles):
             player = await load_player(session, battle["team"][0]["tag"])
             player.cards = battle["team"][0]["cards"]
             opponent = await load_player(session, battle["opponent"][0]["tag"])
             opponent.cards = battle["opponent"][0]["cards"]
             players.append((player, opponent))
-
-        print_best(players, lambda x: x[1].trophies, True, "Opponent trophies")
-        print_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies")
-        print_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins")
-        print_best(players, lambda x: x[0].min_card_level, False, "Lowest card level")
-        print_best(players, lambda x: x[0].sum_level, False, "Lowest sum of card levels")
+        return players
 
 
-def print_best(values, key, reverse, name):
+async def collection_day_results():
+    db = client["clashroyale"]
+    war_log = db["warlog"]
+    war = next(war_log.find({}).sort("createdDate", -1))
+    date = war["createdDate"]
+    current_war_battles = load_collection_day_battles(date, db["battlelog"])
+
+    players = await load_opponents(current_war_battles)
+
+    print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
+    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies"))
+    print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
+
+
+async def war_day_results():
+    db = client["clashroyale"]
+    war_log = db["warlog"]
+    war = next(war_log.find({}).sort("createdDate", -1))
+    date = war["createdDate"]
+    current_war_battles = load_war_day_battles(date, db["battlelog"])
+
+    players = await load_opponents(current_war_battles)
+
+    print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
+    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies"))
+    print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
+    print(find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level"))
+    print(find_best(players, lambda x: x[0].mean_level, False, "Mean cards level"))
+
+
+async def main():
+    # await collection_day_results()
+    await war_day_results()
+
+
+def find_best(values, key, reverse, name):
     values = sorted(values, key=key, reverse=reverse)
     best = key(values[0])
-    print(name)
+    result = f"{name}\n"
     for value in values:
         if reverse:
             if key(value) < best:
@@ -95,8 +137,8 @@ def print_best(values, key, reverse, name):
         else:
             if key(value) > best:
                 break
-        print(value[0].name, key(value))
-    print()
+        result += f"{value[0].name} {key(value)}\n"
+    return result
 
 
 if __name__ == '__main__':
@@ -105,3 +147,4 @@ if __name__ == '__main__':
         loop.run_until_complete(main())
     except asyncio.CancelledError:
         pass
+    client.close()
