@@ -43,6 +43,9 @@ async def fetch_warlog(session, clan_tag: str) -> bool:
     )
 
     async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return False
+
         wars = await response.json()
         return store_warlog(clan_tag, wars["items"])
 
@@ -55,6 +58,9 @@ async def fetch_current_war(session, clan_tag: str):
     )
 
     async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return 60
+
         war = await response.json()
         now = datetime.utcnow()
         if war["state"] == "collectionDay":
@@ -76,9 +82,12 @@ async def fetch_player_battle_log(session, player_tag: str):
     )
 
     async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return False
+
         battles = await response.json()
         clan_war_battles = filter(lambda x: x["type"] in ["clanWarCollectionDay", "clanWarWarDay"], battles)
-        store_battle_log(player_tag, clan_war_battles)
+        return store_battle_log(player_tag, clan_war_battles)
 
 
 async def fetch_clan_battle_log(session, clan_tag: str):
@@ -89,6 +98,9 @@ async def fetch_clan_battle_log(session, clan_tag: str):
     )
 
     async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return False
+
         clan = await response.json()
         for member in clan["memberList"]:
             player_tag = member["tag"].replace("#", "")
