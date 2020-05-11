@@ -107,8 +107,10 @@ async def load_opponents(session, battles):
     players = []
     for battle in tqdm(battles):
         player = await load_player(session, battle["team"][0]["tag"])
+        player.trophies = battle["team"][0]["startingTrophies"]
         player.cards = battle["team"][0]["cards"]
         opponent = await load_player(session, battle["opponent"][0]["tag"])
+        opponent.trophies = battle["opponent"][0]["startingTrophies"]
         opponent.cards = battle["opponent"][0]["cards"]
         players.append((player, opponent))
     return players
