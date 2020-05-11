@@ -52,6 +52,16 @@ async def load_player(session, player_tag: str) -> Player:
         return player
 
 
+def filter_battles_by_clan(battles, clan_tag):
+    filtered_battles = []
+    for battle in battles:
+        for player in battle["team"]:
+            if player["clan"]["tag"] == clan_tag:
+                filtered_battles.append(battle)
+                break
+    return filtered_battles
+
+
 def filter_battles_by_date(battles, start_date, end_date):
     filtered_battles = []
     for battle in battles:
@@ -62,22 +72,18 @@ def filter_battles_by_date(battles, start_date, end_date):
     return filtered_battles
 
 
-def load_collection_day_battles(date, battle_log):
-    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ") + timedelta(days=1)
-    start_date = end_date + timedelta(days=-1)
-
+def load_collection_day_battles(start_date, end_date, battle_log, clan_tag):
     battles = battle_log.find({"type": "clanWarCollectionDay"})
     current_war_battles = filter_battles_by_date(battles, start_date, end_date)
-    return current_war_battles
+    current_war_battles_by_clan = filter_battles_by_clan(current_war_battles, clan_tag)
+    return current_war_battles_by_clan
 
 
-def load_war_day_battles(date, battle_log):
-    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
-    start_date = end_date + timedelta(days=-1)
-
+def load_war_day_battles(start_date, end_date, battle_log, clan_tag):
     battles = battle_log.find({"type": "clanWarWarDay"})
     current_war_battles = filter_battles_by_date(battles, start_date, end_date)
-    return current_war_battles
+    current_war_battles_by_clan = filter_battles_by_clan(current_war_battles, clan_tag)
+    return current_war_battles_by_clan
 
 
 async def load_opponents(battles):
@@ -92,12 +98,14 @@ async def load_opponents(battles):
         return players
 
 
-async def collection_day_results():
+async def collection_day_results(clan_tag: str):
     db = client["clashroyale"]
     war_log = db["warlog"]
     war = next(war_log.find({}).sort("createdDate", -1))
     date = war["createdDate"]
-    current_war_battles = load_collection_day_battles(date, db["battlelog"])
+    end_date = datetime.now()
+    start_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
+    current_war_battles = load_collection_day_battles(start_date, end_date, db["battlelog"], clan_tag)
 
     players = await load_opponents(current_war_battles)
 
@@ -106,25 +114,27 @@ async def collection_day_results():
     print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
 
 
-async def war_day_results():
+async def war_day_results(clan_tag: str):
     db = client["clashroyale"]
     war_log = db["warlog"]
     war = next(war_log.find({}).sort("createdDate", -1))
     date = war["createdDate"]
-    current_war_battles = load_war_day_battles(date, db["battlelog"])
+    end_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
+    start_date = end_date + timedelta(days=-1)
+    current_war_battles = load_war_day_battles(start_date, end_date, db["battlelog"], clan_tag)
 
     players = await load_opponents(current_war_battles)
 
     print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
-    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
+    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies"))
     print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
     print(find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level", 9))
     print(find_best(players, lambda x: x[0].mean_level, False, "Mean cards level"))
 
 
 async def main():
-    # await collection_day_results()
-    await war_day_results()
+    await collection_day_results("#2UJ2GJ")
+    # await war_day_results("#2UJ2GJ")
 
 
 def find_best(values, key, reverse, name, threshold=None):

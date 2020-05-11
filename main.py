@@ -67,6 +67,8 @@ async def fetch_current_war(session, clan_tag: str):
             end_time = war["collectionEndTime"]
         elif war["state"] == "warDay":
             end_time = war["warEndTime"]
+        else:
+            return 60
         time_left = datetime.strptime(end_time, "%Y%m%dT%H%M%S.%fZ") - now
         seconds_left = time_left.seconds
         if seconds_left <= 0:
@@ -119,6 +121,7 @@ async def main():
             if seconds_left < battle_log_cooldown:
                 await asyncio.sleep(seconds_left + 60)
                 await fetch_warlog(session, clan_tag)
+                await fetch_clan_battle_log(session, clan_tag)
             else:
                 await asyncio.sleep(battle_log_cooldown)
                 await fetch_clan_battle_log(session, clan_tag)
