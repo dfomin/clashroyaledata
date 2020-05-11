@@ -110,7 +110,7 @@ async def collection_day_results(clan_tag: str):
     players = await load_opponents(current_war_battles)
 
     print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
-    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies"))
+    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
     print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
 
 
@@ -126,7 +126,7 @@ async def war_day_results(clan_tag: str):
     players = await load_opponents(current_war_battles)
 
     print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
-    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies"))
+    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
     print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
     print(find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level", 9))
     print(find_best(players, lambda x: x[0].mean_level, False, "Mean cards level"))
@@ -140,6 +140,8 @@ async def main():
 def find_best(values, key, reverse, name, threshold=None):
     values = sorted(values, key=key, reverse=reverse)
     threshold = threshold or key(values[0])
+    if (reverse and key(values[0]) < threshold) or (not reverse and key(values[0]) > threshold):
+        threshold = key(values[0])
     result = f"{name}\n"
     for value in values:
         if reverse:
