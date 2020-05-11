@@ -52,6 +52,23 @@ async def load_player(session, player_tag: str) -> Player:
         return player
 
 
+async def fetch_current_war(session, clan_tag: str):
+    clan_tag = clan_tag.replace("#", "")
+
+    url = f"https://api.clashroyale.com/v1/clans/%23{clan_tag}/currentwar"
+
+    params = dict(
+        authorization=royale_token
+    )
+
+    async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return None
+
+        war = await response.json()
+        return war
+
+
 def filter_battles_by_clan(battles, clan_tag):
     filtered_battles = []
     for battle in battles:
@@ -86,19 +103,18 @@ def load_war_day_battles(start_date, end_date, battle_log, clan_tag):
     return current_war_battles_by_clan
 
 
-async def load_opponents(battles):
-    async with aiohttp.ClientSession() as session:
-        players = []
-        for battle in tqdm(battles):
-            player = await load_player(session, battle["team"][0]["tag"])
-            player.cards = battle["team"][0]["cards"]
-            opponent = await load_player(session, battle["opponent"][0]["tag"])
-            opponent.cards = battle["opponent"][0]["cards"]
-            players.append((player, opponent))
-        return players
+async def load_opponents(session, battles):
+    players = []
+    for battle in tqdm(battles):
+        player = await load_player(session, battle["team"][0]["tag"])
+        player.cards = battle["team"][0]["cards"]
+        opponent = await load_player(session, battle["opponent"][0]["tag"])
+        opponent.cards = battle["opponent"][0]["cards"]
+        players.append((player, opponent))
+    return players
 
 
-async def collection_day_results(clan_tag: str):
+async def collection_day_results(session, clan_tag: str):
     db = client["clashroyale"]
     war_log = db["warlog"]
     war = next(war_log.find({}).sort("createdDate", -1))
@@ -114,7 +130,7 @@ async def collection_day_results(clan_tag: str):
     print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
 
 
-async def war_day_results(clan_tag: str):
+async def war_day_results(session, clan_tag: str):
     db = client["clashroyale"]
     war_log = db["warlog"]
     war = next(war_log.find({}).sort("createdDate", -1))
@@ -123,7 +139,7 @@ async def war_day_results(clan_tag: str):
     start_date = end_date + timedelta(days=-1)
     current_war_battles = load_war_day_battles(start_date, end_date, db["battlelog"], clan_tag)
 
-    players = await load_opponents(current_war_battles)
+    players = await load_opponents(session, current_war_battles)
 
     print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
     print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
@@ -133,8 +149,17 @@ async def war_day_results(clan_tag: str):
 
 
 async def main():
-    await collection_day_results("#2UJ2GJ")
-    # await war_day_results("#2UJ2GJ")
+    clan_tag = "#2UJ2GJ"
+    async with aiohttp.ClientSession() as session:
+        current_war = await fetch_current_war(session, clan_tag)
+        if current_war is not None:
+            state = current_war["state"]
+            if state == "collectionDay" or state == "notInWar":
+                await war_day_results(session, clan_tag)
+            elif state == "warDay":
+                await collection_day_results(session, clan_tag)
+            else:
+                print("Current war is unavailable or unknown state.")
 
 
 def find_best(values, key, reverse, name, threshold=None):
