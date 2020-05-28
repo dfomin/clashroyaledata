@@ -121,11 +121,11 @@ async def collection_day_results(session, clan_tag: str):
     war_log = db["warlog"]
     war = next(war_log.find({}).sort("createdDate", -1))
     date = war["createdDate"]
-    end_date = datetime.now()
+    end_date = datetime.utcnow()
     start_date = datetime.strptime(date, "%Y%m%dT%H%M%S.%fZ")
     current_war_battles = load_collection_day_battles(start_date, end_date, db["battlelog"], clan_tag)
 
-    players = await load_opponents(current_war_battles)
+    players = await load_opponents(session, current_war_battles)
 
     print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
     print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))

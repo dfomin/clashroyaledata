@@ -111,7 +111,7 @@ async def fetch_clan_battle_log(session, clan_tag: str):
 
 async def main():
     clan_tag = "2UJ2GJ"
-    battle_log_cooldown = 60 * 60
+    battle_log_cooldown = 30 * 60
     async with aiohttp.ClientSession() as session:
         await fetch_warlog(session, clan_tag)
         await fetch_clan_battle_log(session, clan_tag)
