@@ -48,6 +48,8 @@ async def load_player(session, player_tag: str) -> Player:
 
     async with session.get(url, params=params) as response:
         p = await response.json()
+        if "name" not in p:
+            return None
         player = Player(player_tag, p["name"], p["trophies"], p["bestTrophies"], p["warDayWins"])
         return player
 
@@ -89,10 +91,21 @@ def filter_battles_by_date(battles, start_date, end_date):
     return filtered_battles
 
 
+def filter_battles_by_win(battles):
+    filtered_battles = []
+    for battle in battles:
+        player_crowns = int(battle["team"][0]["crowns"])
+        opponent_crowns = int(battle["opponent"][0]["crowns"])
+        if player_crowns > opponent_crowns:
+            filtered_battles.append(battle)
+    return filtered_battles
+
+
 def load_collection_day_battles(start_date, end_date, battle_log, clan_tag):
     battles = battle_log.find({"type": "clanWarCollectionDay"})
     current_war_battles = filter_battles_by_date(battles, start_date, end_date)
     current_war_battles_by_clan = filter_battles_by_clan(current_war_battles, clan_tag)
+    # current_war_battles_by_clan = filter_battles_by_win(current_war_battles_by_clan)
     return current_war_battles_by_clan
 
 
@@ -100,6 +113,7 @@ def load_war_day_battles(start_date, end_date, battle_log, clan_tag):
     battles = battle_log.find({"type": "clanWarWarDay"})
     current_war_battles = filter_battles_by_date(battles, start_date, end_date)
     current_war_battles_by_clan = filter_battles_by_clan(current_war_battles, clan_tag)
+    # current_war_battles_by_clan = filter_battles_by_win(current_war_battles_by_clan)
     return current_war_battles_by_clan
 
 
@@ -107,9 +121,13 @@ async def load_opponents(session, battles):
     players = []
     for battle in tqdm(battles):
         player = await load_player(session, battle["team"][0]["tag"])
+        if player is None:
+            continue
         player.trophies = battle["team"][0]["startingTrophies"]
         player.cards = battle["team"][0]["cards"]
         opponent = await load_player(session, battle["opponent"][0]["tag"])
+        if opponent is None:
+            continue
         opponent.trophies = battle["opponent"][0]["startingTrophies"]
         opponent.cards = battle["opponent"][0]["cards"]
         players.append((player, opponent))
