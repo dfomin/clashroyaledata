@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timedelta
 from tqdm import tqdm
 
@@ -145,9 +144,11 @@ async def collection_day_results(session, clan_tag: str):
 
     players = await load_opponents(session, current_war_battles)
 
-    print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
-    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
-    print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
+    text = ""
+    text += find_best(players, lambda x: x[1].trophies, True, "Opponent trophies")
+    text += find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000)
+    text += find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins")
+    return text
 
 
 async def war_day_results(session, clan_tag: str):
@@ -161,25 +162,13 @@ async def war_day_results(session, clan_tag: str):
 
     players = await load_opponents(session, current_war_battles)
 
-    print(find_best(players, lambda x: x[1].trophies, True, "Opponent trophies"))
-    print(find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000))
-    print(find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins"))
-    print(find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level", 9))
-    print(find_best(players, lambda x: x[0].mean_level, False, "Mean cards level"))
-
-
-async def main():
-    clan_tag = "#2UJ2GJ"
-    async with aiohttp.ClientSession() as session:
-        current_war = await fetch_current_war(session, clan_tag)
-        if current_war is not None:
-            state = current_war["state"]
-            if state == "collectionDay" or state == "notInWar":
-                await war_day_results(session, clan_tag)
-            elif state == "warDay":
-                await collection_day_results(session, clan_tag)
-            else:
-                print("Current war is unavailable or unknown state.")
+    text = ""
+    text += find_best(players, lambda x: x[1].trophies, True, "Opponent trophies")
+    text += find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000)
+    text += find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins")
+    text += find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level", 9)
+    text += find_best(players, lambda x: x[0].mean_level, False, "Mean cards level")
+    return text
 
 
 def find_best(values, key, reverse, name, threshold=None):
@@ -196,7 +185,23 @@ def find_best(values, key, reverse, name, threshold=None):
             if key(value) > threshold:
                 break
         result += f"{value[0].name} {key(value)}\n"
+    result += "\n"
     return result
+
+
+async def main():
+    clan_tag = "#2UJ2GJ"
+    async with aiohttp.ClientSession() as session:
+        current_war = await fetch_current_war(session, clan_tag)
+        if current_war is not None:
+            state = current_war["state"]
+            if state == "collectionDay" or state == "notInWar":
+                text = await war_day_results(session, clan_tag)
+            elif state == "warDay":
+                text = collection_day_results(session, clan_tag)
+            else:
+                text = "Current war is unavailable or unknown state."
+            print(text)
 
 
 if __name__ == '__main__':
