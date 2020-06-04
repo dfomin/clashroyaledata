@@ -10,6 +10,13 @@ from private import royale_token
 client = MongoClient('mongodb://localhost:27017/')
 
 
+MAX_TROPHIES = "Соперник(и) с наибольшим количеством кубков:"
+MAX_BEST_TROPHIES = "Соперник(и) с наибольшим рекордом по кубкам:"
+MAX_CLAN_WAR_WINS = "Соперник(и) с наибольшим количеством побед в кв:"
+MIN_CARD_LEVEL = "Самая непрокачанная карта в колоде в кв:"
+MIN_MEAN_CARDS_LEVEL = "Самая непрокачанная колода в кв:"
+
+
 class Player:
     def __init__(self, tag, name, trophies, best_trophies, war_day_wins):
         self.tag = tag
@@ -145,9 +152,9 @@ async def collection_day_results(session, clan_tag: str):
     players = await load_opponents(session, current_war_battles)
 
     text = ""
-    text += find_best(players, lambda x: x[1].trophies, True, "Opponent trophies")
-    text += find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000)
-    text += find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins")
+    text += find_best(players, lambda x: x[1].trophies, True, MAX_TROPHIES)
+    text += find_best(players, lambda x: x[1].best_trophies, True, MAX_BEST_TROPHIES, 7000)
+    text += find_best(players, lambda x: x[1].war_day_wins, True, MAX_CLAN_WAR_WINS)
     return text
 
 
@@ -163,11 +170,11 @@ async def war_day_results(session, clan_tag: str):
     players = await load_opponents(session, current_war_battles)
 
     text = ""
-    text += find_best(players, lambda x: x[1].trophies, True, "Opponent trophies")
-    text += find_best(players, lambda x: x[1].best_trophies, True, "Opponent best trophies", 7000)
-    text += find_best(players, lambda x: x[1].war_day_wins, True, "Opponent war day wins")
-    text += find_best(players, lambda x: x[0].min_card_level, False, "Lowest card level", 9)
-    text += find_best(players, lambda x: x[0].mean_level, False, "Mean cards level")
+    text += find_best(players, lambda x: x[1].trophies, True, MAX_TROPHIES)
+    text += find_best(players, lambda x: x[1].best_trophies, True, MAX_BEST_TROPHIES, 7000)
+    text += find_best(players, lambda x: x[1].war_day_wins, True, MAX_CLAN_WAR_WINS)
+    text += find_best(players, lambda x: x[0].min_card_level, False, MIN_CARD_LEVEL, 9)
+    text += find_best(players, lambda x: x[0].mean_level, False, MIN_MEAN_CARDS_LEVEL)
     return text
 
 
@@ -184,7 +191,10 @@ def find_best(values, key, reverse, name, threshold=None):
         else:
             if key(value) > threshold:
                 break
-        result += f"{value[0].name} {key(value)}\n"
+        if reverse:
+            result += f"{value[0].name} против {value[1].name} ({key(value)})\n"
+        else:
+            result += f"{value[0].name}, уровень: {key(value)}\n"
     result += "\n"
     return result
 
