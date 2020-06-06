@@ -131,12 +131,14 @@ async def load_opponents(session, battles):
             continue
         player.trophies = battle["team"][0]["startingTrophies"]
         player.cards = battle["team"][0]["cards"]
+        player_crowns = int(battle["team"][0]["crowns"])
         opponent = await load_player(session, battle["opponent"][0]["tag"])
         if opponent is None:
             continue
         opponent.trophies = battle["opponent"][0]["startingTrophies"]
         opponent.cards = battle["opponent"][0]["cards"]
-        players.append((player, opponent))
+        opponent_crowns = int(battle["opponent"][0]["crowns"])
+        players.append((player, opponent, player_crowns, opponent_crowns))
     return players
 
 
@@ -192,7 +194,7 @@ def find_best(values, key, reverse, name, threshold=None):
             if key(value) > threshold:
                 break
         if reverse:
-            result += f"{value[0].name} против {value[1].name} ({key(value)})\n"
+            result += f"{value[0].name} {value[2]}-{value[3]} {value[1].name} ({key(value)})\n"
         else:
             result += f"{value[0].name}, уровень: {key(value)}\n"
     result += "\n"

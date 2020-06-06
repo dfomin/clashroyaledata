@@ -24,8 +24,7 @@ def store_warlog(clan_tag: str, warlog: list) -> bool:
             is_new = True
         except pymongo.errors.DuplicateKeyError:
             pass
-    # return is_new
-    return True
+    return is_new
 
 
 def store_battle_log(player_tag: str, battle_log: list) -> bool:
@@ -70,7 +69,7 @@ async def fetch_current_war(session, clan_tag: str):
 
     async with session.get(url, params=params) as response:
         if response.status != 200:
-            return 60
+            return 60, None
 
         war = await response.json()
         now = datetime.utcnow()
@@ -79,7 +78,8 @@ async def fetch_current_war(session, clan_tag: str):
         elif war["state"] == "warDay":
             end_time = war["warEndTime"]
         else:
-            return 60
+            print(war["state"])
+            return 60, None
         time_left = datetime.strptime(end_time, "%Y%m%dT%H%M%S.%fZ") - now
         seconds_left = time_left.seconds
         if seconds_left <= 0:
@@ -130,13 +130,12 @@ async def main():
     telegram_manager = TelegramManager()
     state = None
     async with aiohttp.ClientSession() as session:
-        await fetch_warlog(session, clan_tag)
         await fetch_clan_battle_log(session, clan_tag)
 
         while True:
             old_state = state
             seconds_left, state = await fetch_current_war(session, clan_tag)
-            if state != old_state and state == "warDay":
+            if state != old_state and state == "warDay" and old_state is not None:
                 text = await collection_day_results(session, clan_tag)
                 telegram_manager.message(text)
 
