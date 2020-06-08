@@ -79,7 +79,7 @@ async def fetch_current_war(session, clan_tag: str):
             end_time = war["warEndTime"]
         else:
             print(war["state"])
-            return 60, None
+            return 60, war["state"]
         time_left = datetime.strptime(end_time, "%Y%m%dT%H%M%S.%fZ") - now
         seconds_left = time_left.seconds
         if seconds_left <= 0:

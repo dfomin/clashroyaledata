@@ -196,7 +196,7 @@ def find_best(values, key, reverse, name, threshold=None):
         if reverse:
             result += f"{value[0].name} {value[2]}-{value[3]} {value[1].name} ({key(value)})\n"
         else:
-            result += f"{value[0].name}, уровень: {key(value)}\n"
+            result += f"{value[0].name} (уровень: {key(value)}) {value[2]}-{value[3]} {value[1].name}\n"
     result += "\n"
     return result
 
